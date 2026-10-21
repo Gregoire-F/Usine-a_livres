@@ -19,7 +19,7 @@ import { SystemClock } from "./services/system-clock"
 export type Storage = "memory" | "json"
 
 /** LA ligne qui choisit le stockage : "memory" (perdu à l'arrêt) ou "json" (bonus, fichiers dans api/data/). */
-const STORAGE: Storage = "memory"
+const STORAGE: Storage = "json"
 
 export type ContainerOptions = {
   storage: Storage
@@ -54,6 +54,27 @@ export class Container {
     //   2. Les deux services, avec les repositories, config.clock et config.maxPagesPerBook.
     //   3. Les deux routers, avec leur service.
     // Dès qu'un constructeur réclame une dépendance, TypeScript signale ici le `new` à compléter.
-    this.routers = [new BookRouter(), new PageRouter()]
+ // 1. Les repositories, typés par leur interface
+  let bookRepository: BookRepository
+  let pageRepository: PageRepository
+
+  if (config.storage === "json") {
+    bookRepository = new JsonFileBookRepository(
+      new JsonFile(`${config.dataDir}/books.json`, bookRecordSchema),
+    )
+    pageRepository = new JsonFilePageRepository(
+      new JsonFile(`${config.dataDir}/pages.json`, pageRecordSchema),
+    )
+  } else {
+    bookRepository = new InMemoryBookRepository()
+    pageRepository = new InMemoryPageRepository()
+  }
+
+  // 2. Les services
+  const bookService = new BookService(bookRepository, pageRepository, config.clock)
+  const pageService = new PageService(pageRepository, bookRepository, config.maxPagesPerBook)
+
+  // 3. Les routers
+  this.routers = [new BookRouter(bookService), new PageRouter(pageService)]
   }
 }

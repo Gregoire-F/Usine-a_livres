@@ -1,48 +1,78 @@
-import type { Book, BookWithPages } from "../domain/book"
+import type { Book, BookRecord, BookWithPages } from "../domain/book"
 import type { Clock } from "../domain/clock"
 import { ConflictError, NotFoundError } from "../errors/domain.error"
 import type { BookRepository } from "../repositories/book.repository"
 import type { PageRepository } from "../repositories/page.repository"
 import type { BookInput } from "../schemas/book.schema"
 
-/** Les règles des livres. Le cœur du métier : aucune trace de HTTP ici (ni `reply`, ni statut). */
+/** Met en minuscules et réduit les espaces */
+function normalize(text: string): string {
+  return text.trim().replace(/\s+/g, " ").toLowerCase()
+}
+
 export class BookService {
-  // À faire : injecter par le constructeur
-  //   - le BookRepository : lire et écrire les livres ;
-  //   - le PageRepository : compter les pages, supprimer celles d'un livre supprimé ;
-  //   - la Clock : l'heure de createdAt. Jamais `new Date()` ici, sinon un test ne peut pas fixer la date.
-  // Typer chaque paramètre par l'interface (BookRepository), jamais par une classe (InMemoryBookRepository).
-  // Le service ne crée aucune de ses dépendances : c'est le rôle de container.ts.
-  constructor() {}
+  constructor(
+    private readonly books: BookRepository,
+    private readonly pages: PageRepository,
+    private readonly clock: Clock,
+  ) {}
 
-  /** Tous les livres, chacun avec son `pageCount` (calculé à la lecture, jamais stocké). */
   list(): Book[] {
-    throw new Error("À faire")
+    return this.books.findAll().map((record) => this.toBook(record))
   }
 
-  /** Le livre et ses pages triées. Lever une NotFoundError si le livre n'existe pas. */
   getById(id: number): BookWithPages {
-    throw new Error("À faire")
+    const record = this.books.findById(id)
+    if (!record) throw new NotFoundError(`Le livre ${id} est introuvable.`)
+    const pages = this.pages.findByBookId(id)
+    return { ...record, pageCount: pages.length, pages }
   }
 
-  /**
-   * Créer le livre, `createdAt` donné par l'horloge en ISO (`toISOString()`), `pageCount` à 0.
-   * Lever une ConflictError si le même auteur a déjà un livre du même titre (casse et espaces ignorés).
-   */
   create(input: BookInput): Book {
-    throw new Error("À faire")
+    this.assertNoDuplicate(input)
+    const record = this.books.create({
+      ...input,
+      createdAt: this.clock.now().toISOString(),
+    })
+    return this.toBook(record)
   }
 
-  /**
-   * Remplacer titre, auteur et genre ; `createdAt` ne change pas.
-   * NotFoundError si le livre n'existe pas ; ConflictError en cas de doublon avec un AUTRE livre.
-   */
   update(id: number, input: BookInput): Book {
-    throw new Error("À faire")
+    if (!this.books.findById(id)) {
+      throw new NotFoundError(`Le livre ${id} est introuvable.`)
+    }
+    this.assertNoDuplicate(input, id)
+    const record = this.books.update(id, input)
+    if (!record) throw new NotFoundError(`Le livre ${id} est introuvable.`)
+    return this.toBook(record)
   }
 
-  /** Supprimer le livre et toutes ses pages. NotFoundError si le livre n'existe pas. */
   delete(id: number): void {
-    throw new Error("À faire")
+    if (!this.books.delete(id)) {
+      throw new NotFoundError(`Le livre ${id} est introuvable.`)
+    }
+    this.pages.deleteByBookId(id)
+  }
+
+  /** Ajoute le `pageCount` calculé à un livre brut. */
+  private toBook(record: BookRecord): Book {
+    return { ...record, pageCount: this.pages.findByBookId(record.id).length }
+  }
+
+  /** Lève une ConflictError si un AUTRE livre a le même auteur et le même titre. */
+  private assertNoDuplicate(input: BookInput, ignoreId?: number): void {
+    const title = normalize(input.title)
+    const author = normalize(input.author)
+    const duplicate = this.books
+      .findAll()
+      .some(
+        (b) =>
+          b.id !== ignoreId &&
+          normalize(b.title) === title &&
+          normalize(b.author) === author,
+      )
+    if (duplicate) {
+      throw new ConflictError("Cet auteur a déjà un livre avec ce titre.")
+    }
   }
 }

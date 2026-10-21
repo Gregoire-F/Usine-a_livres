@@ -2,32 +2,54 @@ import type { NewPage, Page } from "../domain/page"
 import type { JsonFile } from "./json-file"
 import type { PageRepository } from "./page.repository"
 
-/** Bonus : les pages dans data/pages.json. Même principe que JsonFileBookRepository. */
 export class JsonFilePageRepository implements PageRepository {
-  // À faire : injecter le JsonFile<Page>.
-  constructor() {}
+  private pages: Page[]
+
+  constructor(private readonly file: JsonFile<Page>) {
+    this.pages = this.file.read()
+  }
 
   findByBookId(bookId: number): Page[] {
-    throw new Error("À faire")
+    return this.pages
+      .filter((page) => page.bookId === bookId)
+      .sort((a, b) => a.number - b.number)
   }
 
   findById(id: number): Page | undefined {
-    throw new Error("À faire")
+    return this.pages.find((page) => page.id === id)
   }
 
   create(data: NewPage): Page {
-    throw new Error("À faire")
+    const maxId = this.pages.reduce((max, page) => Math.max(max, page.id), 0)
+    const page: Page = { id: maxId + 1, ...data }
+    this.pages.push(page)
+    this.save()
+    return page
   }
 
   update(id: number, changes: Partial<Pick<Page, "number" | "content">>): Page | undefined {
-    throw new Error("À faire")
+    const existing = this.pages.find((page) => page.id === id)
+    if (!existing) return undefined
+    const updated: Page = { ...existing, ...changes }
+    this.pages[this.pages.indexOf(existing)] = updated
+    this.save()
+    return updated
   }
 
   delete(id: number): boolean {
-    throw new Error("À faire")
+    const index = this.pages.findIndex((page) => page.id === id)
+    if (index === -1) return false
+    this.pages.splice(index, 1)
+    this.save()
+    return true
   }
 
   deleteByBookId(bookId: number): void {
-    throw new Error("À faire")
+    this.pages = this.pages.filter((page) => page.bookId !== bookId)
+    this.save()
+  }
+
+  private save(): void {
+    this.file.write(this.pages)
   }
 }

@@ -7,26 +7,36 @@ import type { BookRepository } from "./book.repository"
  * Aucune règle métier ici : pas de doublon à vérifier, pas d'erreur à lever. Un livre absent, c'est `undefined`.
  */
 export class InMemoryBookRepository implements BookRepository {
+  private readonly books = new Map<number, BookRecord>()
+  private lastId = 0
+
   findAll(): BookRecord[] {
-    throw new Error("À faire")
+    return [...this.books.values()]
   }
 
   findById(id: number): BookRecord | undefined {
-    throw new Error("À faire")
+    return this.books.get(id)
   }
 
   /** Attribuer un id neuf (1, 2, 3…), ranger le livre, le renvoyer. */
   create(data: Omit<BookRecord, "id">): BookRecord {
-    throw new Error("À faire")
+   this.lastId += 1
+    const book: BookRecord = { id: this.lastId, ...data }
+    this.books.set(book.id, book)
+    return book
   }
 
   /** Remplacer les champs du livre ; `undefined` s'il n'existe pas. */
   update(id: number, fields: BookFields): BookRecord | undefined {
-    throw new Error("À faire")
+    const existing = this.books.get(id)
+    if (!existing) return undefined
+    const updated: BookRecord = { ...existing, ...fields }
+    this.books.set(id, updated)
+    return updated
   }
 
   /** `true` si le livre existait. */
   delete(id: number): boolean {
-    throw new Error("À faire")
+     return this.books.delete(id)
   }
 }

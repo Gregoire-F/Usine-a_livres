@@ -1,4 +1,6 @@
-import { z } from "zod"
+import { z } from "zod";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { dirname } from "node:path"
 
 /**
  * Bonus : un tableau rangé dans un fichier JSON. Les deux repositories JSON en reçoivent chacun un.
@@ -6,18 +8,19 @@ import { z } from "zod"
  */
 export class JsonFile<T> {
   // À faire : recevoir par le constructeur le chemin du fichier et le schema Zod d'un élément (z.ZodType<T>).
-  constructor() {}
+  constructor(
+    private readonly path: string,
+    private readonly schema: z.ZodType<T>,
+  ) {}
 
-  /**
-   * Le contenu du fichier, ou `[]` s'il n'existe pas encore.
-   * Passer le texte lu par JSON.parse, puis par `z.array(schema).parse(...)` : pas de `as T[]`.
-   */
   read(): T[] {
-    throw new Error("À faire")
+    if (!existsSync(this.path)) return [];
+    const text = readFileSync(this.path, "utf-8");
+    return z.array(this.schema).parse(JSON.parse(text));
   }
 
-  /** Réécrire tout le fichier (JSON indenté) ; créer le dossier s'il manque. */
   write(items: readonly T[]): void {
-    throw new Error("À faire")
+    mkdirSync(dirname(this.path), { recursive: true });
+    writeFileSync(this.path, JSON.stringify(items, null, 2), "utf-8");
   }
 }
