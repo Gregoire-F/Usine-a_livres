@@ -3,7 +3,10 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "workspaces": ["api", "web"],
+  "workspaces": [
+    "api",
+    "web"
+  ],
   "scripts": {
     "dev": "concurrently --names api,web --prefix-colors blue,green \"npm run dev -w api\" \"npm run dev -w web\"",
     "test": "npm test -w api",
@@ -14,5 +17,9 @@
   },
   "engines": {
     "node": ">=22.12.0"
+  },
+  "dependencies": {
+    "@fastify/jwt": "^10.2.5",
+    "bcryptjs": "^3.0.3"
   }
 }

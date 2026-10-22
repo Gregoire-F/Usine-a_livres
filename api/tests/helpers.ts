@@ -16,7 +16,7 @@ export function makeApp(options: Partial<ContainerOptions> = {}): FastifyInstanc
     maxPagesPerBook: 5,
     ...options,
   })
-  return buildApp(container)
+  return buildApp(container, { jwtSecret: "secret-de-test" })
 }
 
 export const dune = { title: "Dune", author: "Frank Herbert", genre: "roman" } as const

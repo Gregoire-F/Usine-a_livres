@@ -17,3 +17,6 @@ export class ValidationError extends DomainError {}
 
 /** L'opération entre en conflit avec l'existant (doublon) : 409. */
 export class ConflictError extends DomainError {}
+
+/** Gérer la non-authentification */
+export class UnauthorizedError extends DomainError {}
