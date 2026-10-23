@@ -7,4 +7,4 @@ const jwtSecret = process.env.JWT_SECRET
 
 
 const app = buildApp(new Container(), { logger: true, webOrigin, jwtSecret })
-await app.listen({ port })
+await app.listen({ port, host: "0.0.0.0" })
